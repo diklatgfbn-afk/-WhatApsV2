@@ -12,6 +12,15 @@ class User {
 
   static create({ email, password, display_name }) {
     const password_hash = bcrypt.hashSync(password, 10);
+    // Check which columns exist in the users table
+    const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+    if (cols.includes('username')) {
+      // Old schema has username NOT NULL — fill it with display_name or email prefix
+      const username = display_name || email.split('@')[0];
+      const stmt = db.prepare('INSERT INTO users (email, password_hash, display_name, username) VALUES (?, ?, ?, ?)');
+      const info = stmt.run(email, password_hash, display_name, username);
+      return this.findById(info.lastInsertRowid);
+    }
     const stmt = db.prepare('INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)');
     const info = stmt.run(email, password_hash, display_name);
     return this.findById(info.lastInsertRowid);
