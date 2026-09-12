@@ -7,22 +7,32 @@ class User {
   }
 
   static findById(id) {
-    return db.prepare('SELECT id, email, display_name, currency, created_at, updated_at FROM users WHERE id = ?').get(id);
+    // Use SELECT * to work with any schema
+    return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   }
 
   static create({ email, password, display_name }) {
     const password_hash = bcrypt.hashSync(password, 10);
-    // Check which columns exist in the users table
     const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
-    if (cols.includes('username')) {
-      // Old schema has username NOT NULL — fill it with display_name or email prefix
-      const username = display_name || email.split('@')[0];
-      const stmt = db.prepare('INSERT INTO users (email, password_hash, display_name, username) VALUES (?, ?, ?, ?)');
-      const info = stmt.run(email, password_hash, display_name, username);
-      return this.findById(info.lastInsertRowid);
+    const defaults = {
+      username: display_name || email.split('@')[0],
+      role: 'user',
+      phone: '',
+      avatar: '',
+      is_active: 1,
+    };
+    // Build dynamic INSERT based on existing columns
+    const insertCols = ['email', 'password_hash', 'display_name'];
+    const insertVals = [email, password_hash, display_name];
+    for (const col of cols) {
+      if (!insertCols.includes(col) && defaults[col] !== undefined) {
+        insertCols.push(col);
+        insertVals.push(defaults[col]);
+      }
     }
-    const stmt = db.prepare('INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)');
-    const info = stmt.run(email, password_hash, display_name);
+    const placeholders = insertCols.map(() => '?').join(', ');
+    const stmt = db.prepare(`INSERT INTO users (${insertCols.join(', ')}) VALUES (${placeholders})`);
+    const info = stmt.run(...insertVals);
     return this.findById(info.lastInsertRowid);
   }
 
