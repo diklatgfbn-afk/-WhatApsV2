@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#075e54">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>WhatAps - Pengeluaran</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>💸 WhatAps</h1>
+      <div class="subtitle" id="userName">User</div>
+    </div>
+    <button onclick="logout()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer" title="Logout">🚪</button>
+  </div>
+
+  <!-- Page: Dashboard -->
+  <div id="page-dashboard" class="page active">
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Hari Ini</div><div class="value" id="kpiToday">Rp 0</div></div>
+      <div class="kpi"><div class="label">Bulan Ini</div><div class="value" id="kpiMonth">Rp 0</div></div>
+      <div class="kpi"><div class="label">Rata-rata/Hari</div><div class="value" id="kpiAvg">Rp 0</div></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">📊 Hari Ini</h3>
+      <div class="chart-container"><canvas id="dailyChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">📅 Minggu Ini</h3>
+      <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">📝 Pengeluaran Terakhir</h3>
+      <div id="recentExpenses"></div>
+    </div>
+  </div>
+
+  <!-- Page: Expenses -->
+  <div id="page-expenses" class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3>📋 Pengeluaran Hari Ini</h3>
+        <input type="date" id="expDateFilter" value="" onchange="filterExpenses(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+      </div>
+      <div id="expenseList"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">🏷️ Kategori</h3>
+      <div id="categoryChips"></div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openModal('addExpenseModal')">+</button>
+
+  <!-- Modal: Add Expense -->
+  <div class="modal-overlay" id="addExpenseModal" style="display:none" onclick="if(event.target===this)closeModal('addExpenseModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Tambah Pengeluaran</h3>
+        <button class="modal-close" onclick="closeModal('addExpenseModal')">✕</button>
+      </div>
+      <form id="addExpenseForm" onsubmit="addExpense(event)">
+        <div class="form-group">
+          <div id="receiptPreview" style="display:none;text-align:center">
+            <img id="receiptPreviewImg" class="upload-preview" src="" alt="Preview struk">
+            <div id="receiptStatus" style="font-size:12px;color:var(--text-secondary);margin-top:4px">🧾 Struk diproses...</div>
+          </div>
+          <div class="upload-area" id="scanArea" onclick="startReceiptScan()">
+            <div style="font-size:24px;margin-bottom:8px">🧾</div>
+            <div style="font-size:13px;color:var(--text-secondary)">Foto / Upload Struk</div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">Klik atau seret gambar struk belanja</div>
+            <input type="file" id="receiptFileInput" accept="image/*" onchange="uploadReceipt(this.files[0])" style="display:none">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Kategori</label>
+          <div id="modalCategoryChips"></div>
+        </div>
+        <div class="form-group">
+          <label>Nominal (Rp)</label>
+          <input type="number" id="expAmount" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Catatan</label>
+          <input type="text" id="expNote" placeholder="Contoh: Beli makan siang">
+        </div>
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="expDate" value="">
+        </div>
+        <button type="submit" class="btn btn-primary">💾 Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Page: WhatsApp -->
+  <div id="page-whatsapp" class="page">
+    <div class="card">
+      <h3>📱 WhatsApp</h3>
+      <div style="display:flex;align-items:center;gap:10px;margin:15px 0">
+        <div id="waIndicator" style="width:12px;height:12px;border-radius:50%;background:var(--danger)"></div>
+        <span id="waStatusText">❌ Belum terhubung</span>
+      </div>
+      <button class="btn btn-primary" onclick="connectWhatsApp()" style="margin-bottom:15px">🔗 Hubungkan WhatsApp</button>
+      <div id="waQrContainer" style="display:none;min-height:100px"></div>
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-top:10px">
+        <p style="font-size:12px;color:var(--text-secondary)">
+          ⚠️ <strong>Pertama kali?</strong> Browser Chromium akan dijalankan otomatis di background. Tunggu 10-30 detik hingga QR muncul.<br><br>
+          📝 <strong>Format pesan WhatsApp:</strong><br>
+          <code>beli makan 15000</code> → Pengeluaran Makanan Rp15.000<br>
+          <code>transport 5000</code> → Pengeluaran Transport Rp5.000<br>
+          <code>belanja shopee 100000</code> → Pengeluaran Belanja Rp100.000<br><br>
+          📊 <strong>Perintah laporan:</strong><br>
+          <code>laporan</code> → Bulanan &nbsp;|&nbsp; <code>laporan harian</code> &nbsp;|&nbsp; <code>laporan mingguan</code><br>
+          <code>laporan 01-09-2026 sd 10-09-2026</code> → Custom<br><br>
+          🗑️ <strong>Perintah hapus:</strong><br>
+          <code>hapus 12</code> → Hapus by ID &nbsp;|&nbsp; <code>hapus nasi 15000</code> → Hapus by catatan
+        </p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">💬 Pesan dari WhatsApp</h3>
+      <div id="waMessages"></div>
+      <button class="btn btn-outline btn-sm" onclick="loadWhatsAppMessages()" style="margin-top:10px">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- Page: Reports -->
+  <div id="page-reports" class="page">
+    <div class="card">
+      <h3 id="reportPeriodLabel">📊 Ringkasan Pengeluaran</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <select id="reportPeriod" onchange="applyReportPeriod()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+          <option value="harian">Hari Ini</option>
+          <option value="mingguan">Minggu Ini</option>
+          <option value="bulanan" selected>Bulan Ini</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="date" id="reportStart" style="display:none;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        <span id="reportToSep" style="display:none;color:var(--text-secondary);font-size:13px">s/d</span>
+        <input type="date" id="reportEnd" style="display:none;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:15px;margin-top:15px">
+        <div style="flex:1;text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary)">Total</div>
+          <div style="font-size:20px;font-weight:700" id="monthTotal">Rp 0</div>
+        </div>
+        <div style="flex:1;text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary)">Rata-rata/Hari</div>
+          <div style="font-size:20px;font-weight:700" id="monthAvg">Rp 0</div>
+        </div>
+        <div style="flex:1;text-align:center">
+          <div style="font-size:12px;color:var(--text-secondary)">Hari Aktif</div>
+          <div style="font-size:20px;font-weight:700" id="monthDays">0</div>
+        </div>
+      </div>
+      <div id="monthDiffBox" style="text-align:center;margin-top:10px;font-size:13px">
+        vs bulan lalu: <span id="monthDiff" style="font-weight:700">0%</span>
+      </div>
+    </div>
+    <div id="compareCard" class="card">
+      <h3 style="margin-bottom:10px">📊 Perbandingan Bulanan</h3>
+      <div class="chart-container"><canvas id="compareChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">📈 Tren Pengeluaran</h3>
+      <div class="chart-container"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px">📂 Per Kategori</h3>
+      <div id="categoryBreakdown"></div>
+    </div>
+  </div>
+
+  <!-- Page: Settings -->
+  <div id="page-settings" class="page">
+    <div class="card">
+      <h3>👤 Profil</h3>
+      <form id="profileForm" onsubmit="saveProfile(event)">
+        <div class="form-group">
+          <label>Nama</label>
+          <input type="text" id="settingName">
+        </div>
+        <div class="form-group">
+          <label>Mata Uang</label>
+          <select id="settingCurrency">
+            <option value="IDR">🇮🇩 IDR (Rupiah)</option>
+            <option value="USD">🇺🇸 USD (Dollar)</option>
+            <option value="EUR">🇪🇺 EUR (Euro)</option>
+            <option value="GBP">🇬🇧 GBP (Pound)</option>
+            <option value="MYR">🇲🇾 MYR (Ringgit)</option>
+            <option value="THB">🇹🇭 THB (Baht)</option>
+            <option value="JPY">🇯🇵 JPY (Yen)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">💾 Simpan Profil</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>⏰ Pengingat</h3>
+      <div id="reminderList"></div>
+      <form id="addReminderForm" onsubmit="addReminder(event)" style="margin-top:15px">
+        <div class="form-group">
+          <label>Waktu</label>
+          <input type="time" id="reminderTime" required>
+        </div>
+        <div class="form-group">
+          <label>Channel</label>
+          <select id="reminderChannel">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pesan</label>
+          <input type="text" id="reminderMsg" placeholder="Catat pengeluaran hari ini!">
+        </div>
+        <button type="submit" class="btn btn-primary">➕ Tambah Pengingat</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>📤 Export Data</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Download data pengeluaran dalam format CSV</p>
+      <button class="btn btn-outline" onclick="exportCSV()">📥 Download CSV</button>
+    </div>
+
+    <div class="card">
+      <h3>🗑️ Kelola Pengeluaran</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Hapus pengeluaran yang salah input</p>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+        <input type="month" id="manageMonth" onchange="loadManageExpenses()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+      </div>
+      <div id="manageExpenseList"></div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <button class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+      <span class="icon">📊</span>Dashboard
+    </button>
+    <button class="nav-item" data-page="expenses" onclick="navigateTo('expenses')">
+      <span class="icon">📋</span>Expense
+    </button>
+    <button class="nav-item" data-page="whatsapp" onclick="navigateTo('whatsapp');loadWhatsApp();loadWhatsAppMessages()">
+      <span class="icon">💬</span>WhatsApp
+    </button>
+    <button class="nav-item" data-page="reports" onclick="navigateTo('reports')">
+      <span class="icon">📈</span>Rekap
+    </button>
+    <button class="nav-item" data-page="settings" onclick="navigateTo('settings')">
+      <span class="icon">⚙️</span>Setting
+    </button>
+  </nav>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/expenses.js"></script>
+  <script src="/js/whatsapp.js"></script>
+  <script src="/js/reports.js"></script>
+  <script src="/js/settings.js"></script>
+  <script>
+    // Set default dates
+    document.getElementById('expDate').value = today();
+    document.getElementById('expDateFilter').value = today();
+
+    // Filter expenses by date
+    async function filterExpenses(date) {
+      const expenses = (await api(`/api/expenses?date=${date}`))?.expenses || [];
+      renderExpenseList(expenses);
+    }
+
+    // Load modal categories when opening
+    const origOpenModal = openModal;
+    openModal = function(id) {
+      if (id === 'addExpenseModal') {
+        document.getElementById('modalCategoryChips').innerHTML = categories.map(c => `
+          <span class="chip" data-id="${c.id}" onclick="selectCategory(${c.id})" style="background:${c.color}15;color:${c.color}">
+            <span class="color-dot" style="background:${c.color}"></span>${c.name}
+          </span>
+        `).join('');
+      }
+      origOpenModal(id);
+    };
+
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

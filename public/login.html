@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#25D366">
+  <title>WhatAps - Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #075e54 0%, #128c7e 50%, #25d366 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff; border-radius: 20px; padding: 40px 30px;
+      width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .logo { text-align: center; margin-bottom: 30px; }
+    .logo h1 { color: #075e54; font-size: 28px; font-weight: 700; }
+    .logo p { color: #667; font-size: 14px; margin-top: 5px; }
+    .tabs { display: flex; gap: 0; margin-bottom: 25px; background: #f0f0f0; border-radius: 10px; padding: 3px; }
+    .tabs button {
+      flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: 600;
+      font-size: 14px; cursor: pointer; transition: 0.2s; background: transparent; color: #888;
+    }
+    .tabs button.active { background: #fff; color: #075e54; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 5px; }
+    .form-group input {
+      width: 100%; padding: 12px 15px; border: 2px solid #e8e8e8; border-radius: 10px;
+      font-size: 15px; transition: 0.2s; outline: none;
+    }
+    .form-group input:focus { border-color: #25d366; }
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px;
+      font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 5px;
+    }
+    .btn-primary { background: #25d366; color: #fff; }
+    .btn-primary:hover { background: #20ba58; transform: translateY(-1px); }
+    .error { color: #e74c3c; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>💸 WhatAps</h1>
+      <p>Pencatatan Pengeluaran via WhatsApp</p>
+    </div>
+    <div class="tabs">
+      <button class="active" onclick="showTab('login')">Masuk</button>
+      <button onclick="showTab('register')">Daftar</button>
+    </div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="email@contoh.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Masukkan password" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Masuk</button>
+    </form>
+    <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
+      <div class="form-group">
+        <label>Nama</label>
+        <input type="text" id="regName" placeholder="Nama tampilan" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="email@contoh.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Buat password (min 6 karakter)" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary">Daftar</button>
+    </form>
+    <div class="error" id="errorMsg"></div>
+  </div>
+  <script>
+    function showTab(tab) {
+      document.querySelectorAll('.tabs button').forEach((b,i) => {
+        b.classList.toggle('active', (tab==='login' ? i===0 : i===1));
+      });
+      document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = tab==='register' ? 'block' : 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg; el.style.display = 'block';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }), credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) return showError(data.error || 'Login gagal');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch { showError('Koneksi error'); }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const display_name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, display_name }), credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) return showError(data.error || 'Register gagal');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch { showError('Koneksi error'); }
+    }
+
+    // Check if already logged in
+    if (localStorage.getItem('token')) window.location.href = '/';
+  </script>
+</body>
+</html>

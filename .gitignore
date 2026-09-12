@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+uploads/
+dist/
+.DS_Store
+.wwebjs_auth/
+.wwebjs_cache/
+eror.png
