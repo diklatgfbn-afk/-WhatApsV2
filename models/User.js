@@ -16,7 +16,7 @@ class User {
     const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
     const defaults = {
       username: display_name || email.split('@')[0],
-      role: 'user',
+      role: 'karyawan',
       phone: '',
       avatar: '',
       is_active: 1,
